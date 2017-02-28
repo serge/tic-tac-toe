@@ -1,5 +1,6 @@
 #!/bin/python
 import copy
+from gui import start_gui
 
 g_hash = {}
 class CheckWinner:
@@ -33,6 +34,13 @@ class Board:
 
     def is_empty(self, piece):
         return piece == ' '
+
+    def enum_pieces(self):
+        for r in range(self.__side):
+            for c in range(self.__side):
+                cell = self.get(r, c)
+                if not self.is_empty(cell):
+                    yield r,c,cell
 
     def moves(self):
         for r in range(self.__side):
@@ -96,6 +104,12 @@ class Board:
             v.append(''.join([self.get(r, c) for c in range(self.__side)]))
         return '\n'.join(v)
 
+    def is_full(self):
+        for cell in self.__board:
+            if self.is_empty(cell):
+                return False
+        return True
+
 
 def CalcScore(board, piece):
     res = board.check_if_won()
@@ -106,23 +120,57 @@ def CalcScore(board, piece):
     sscore = 0
     for b in board.moves():
         if not b in g_hash:
-            score = CalcScore(b, piece)
+            score, br = CalcScore(b, piece)
             g_hash[b] = score
         sscore += g_hash[b]
-    return score, board
+    return sscore, board
 
+
+class Game:
+
+    def __init__(self):
+        self.b = Board()
+
+    def get_board(self):
+        return self.b
+
+    def reinit(self):
+        g_hash = {}
+        self.b = Board()
+
+    def move(self):
+        if len(g_hash) == 0:
+            res = CalcScore(self.b, 'x')
+        u = None
+        for m in self.b.moves():
+            if m.check_if_won() == 'x':
+                u = 1, m
+                break
+            s = g_hash[m]
+            skip = False
+            for o in m.moves():
+                if o.check_if_won() == 'o':
+                    skip = True
+                    break
+            if skip:
+                continue
+            if u == None or u[0] < s:
+                u = s,m
+        u, new_board = u
+        self.b = new_board
+        if self.b.check_if_won() == m.just_moved():
+            return False, 'You loose!'
+        if self.b.is_full():
+            return False, "Draw!"
+        return True, 0
+
+    def next_move(self, r, c):
+        self.b.put(r, c)
+        if self.b.check_if_won() == self.b.just_moved():
+            return False, "You won!"
+        if self.b.is_full():
+            return False, "Draw!"
+        return True, 0
 
 if __name__ == '__main__':
-    b = Board()
-    res = CalcScore(b, 'o')
-    print (res[0])
-    print(res[1])
-    while True:
-        b = res[1]
-        print(b)
-        r = int(input('input row:'))
-        c = int(input('input col:'))
-        b.put(r, c)
-        print(b)
-        if b.check_if_won() == 'x':
-            break
+    start_gui(Game())
