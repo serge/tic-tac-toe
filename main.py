@@ -100,29 +100,24 @@ class Board:
 def CalcScore(board, piece):
     res = board.check_if_won()
     if res == piece:
-        return 100, board
+        return 1, board
     if res != None:
-        return -100, board
-    highest = (None, None)
+        return -1, board
+    sscore = 0
     for b in board.moves():
         if not b in g_hash:
-            board_score,temp = CalcScore(b, piece)
-            g_hash[b] = board_score
-        board_score = g_hash[b]
-        score, rBoard = highest
-        if score == None or score < board_score:
-            highest = (board_score, b)
-    score, rBoard = highest
-    if score == None:
-        rBoard = board
-        score = 0
-    return score - 1, rBoard
+            score = CalcScore(b, piece)
+            g_hash[b] = score
+        sscore += g_hash[b]
+    return score, board
 
 
 if __name__ == '__main__':
     b = Board()
+    res = CalcScore(b, 'o')
+    print (res[0])
+    print(res[1])
     while True:
-        res = CalcScore(b, 'o')
         b = res[1]
         print(b)
         r = int(input('input row:'))
