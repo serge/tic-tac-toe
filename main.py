@@ -2,7 +2,6 @@
 import copy
 from gui import start_gui
 
-g_hash = {}
 class CheckWinner:
 
     def __init__(self, board):
@@ -42,14 +41,6 @@ class Board:
                 if not self.is_empty(cell):
                     yield r,c,cell
 
-    def moves(self):
-        for r in range(self.__side):
-            for c in range(self.__side):
-                if self.is_empty(self.get(r, c)):
-                    newBoard = copy.deepcopy(self)
-                    newBoard.put(r, c)
-                    yield newBoard
-
     def get(self, r, c):
         return self.__board[self.__side * r + c]
 
@@ -58,17 +49,14 @@ class Board:
         self.__board[self.__side * r + c] = self.__next_piece
         self.__next_piece = {'o':'x','x':'o'}[self.__next_piece]
 
+    def get_moves(self):
+        for r in range(self.__side):
+            for c in range(self.__side):
+                if self.is_empty(self.get(r, c)):
+                    yield (r,c)
+
     def next_move(self):
         return self.__next_piece
-
-    def just_moved(self):
-        return {'o':'x','x':'o'}[self.__next_piece]
-
-    def __eq__(self, other):
-        return self.__board == other.__board
-
-    def __hash__(self):
-        return hash(self.__repr__())
 
     def check_if_won(self):
         for r in range(self.__side):
@@ -110,20 +98,53 @@ class Board:
                 return False
         return True
 
+    def enum_lines(self, pr, pc):
+        p = []
+        for r in range(self.__side):
+            if r == pr:
+                continue
+            p.append((r, pc))
+        yield p
+        p = []
+        for c in range(self.__side):
+            if c == pc:
+                continue
+            p.append((pr, c))
+        yield p
+        if pr == pc:
+            p = []
+            for c in range(self.__side):
+                if c == pc:
+                    continue
+                p.append((c, c))
+            yield p
+        if pr == self.__side - pc -1:
+            p = []
+            for c in range(self.__side):
+                if c == pc:
+                    continue
+                p.append((self.__side - c - 1, c))
+            yield p
 
-def CalcScore(board, piece):
-    res = board.check_if_won()
-    if res == piece:
-        return 1, board
-    if res != None:
-        return -1, board
-    sscore = 0
-    for b in board.moves():
-        if not b in g_hash:
-            score, br = CalcScore(b, piece)
-            g_hash[b] = score
-        sscore += g_hash[b]
-    return sscore, board
+
+def ScoreBoard(board, r, c, piece):
+    totalDefense = totalOffence = 0
+    for line in board.enum_lines(r, c):
+        offence = 0
+        defense = 0
+        for (pr, pc) in line:
+            cell = board.get(pr, pc)
+            if cell == piece:
+                offence += 2
+            elif board.is_empty(cell):
+                offence += 1
+            else:
+                defense += 1
+        if defense > 0:
+            offence = 0;
+        totalDefense += [0, 1, 2][defense] * defense
+        totalOffence += offence
+    return totalOffence, totalDefense
 
 
 class Game:
@@ -135,38 +156,30 @@ class Game:
         return self.b
 
     def reinit(self):
-        g_hash = {}
         self.b = Board()
 
     def move(self):
-        if len(g_hash) == 0:
-            res = CalcScore(self.b, 'x')
-        u = None
-        for m in self.b.moves():
-            if m.check_if_won() == 'x':
-                u = 1, m
-                break
-            s = g_hash[m]
-            skip = False
-            for o in m.moves():
-                if o.check_if_won() == 'o':
-                    skip = True
-                    break
-            if skip:
-                continue
-            if u == None or u[0] < s:
-                u = s,m
-        u, new_board = u
-        self.b = new_board
-        if self.b.check_if_won() == m.just_moved():
+        m = None
+        piece = self.b.next_move()
+        for (r, c) in self.b.get_moves():
+            a = ScoreBoard(self.b, r, c, piece)
+            if m == None:
+                m = a, r, c
+            elif m[0][1] < a[1]:
+                m = a, r, c
+            elif m[0][1] == a[1] and m[0][0] < a[0]:
+                m = a, r, c
+        self.b.put(m[1], m[2])
+        if self.b.check_if_won() == piece:
             return False, 'You loose!'
         if self.b.is_full():
             return False, "Draw!"
         return True, 0
 
     def next_move(self, r, c):
+        piece = self.b.next_move()
         self.b.put(r, c)
-        if self.b.check_if_won() == self.b.just_moved():
+        if self.b.check_if_won() == piece:
             return False, "You won!"
         if self.b.is_full():
             return False, "Draw!"
