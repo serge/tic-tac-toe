@@ -130,8 +130,7 @@ class Board:
 def ScoreBoard(board, r, c, piece):
     totalDefense = totalOffence = 0
     for line in board.enum_lines(r, c):
-        offence = 0
-        defense = 0
+        offence = defense = 0
         for (pr, pc) in line:
             cell = board.get(pr, pc)
             if cell == piece:
@@ -140,9 +139,11 @@ def ScoreBoard(board, r, c, piece):
                 offence += 1
             else:
                 defense += 1
+        if offence == 4:
+            return 100, 0
         if defense > 0:
             offence = 0;
-        totalDefense += [0, 1, 2][defense] * defense
+        totalDefense += [0, 1, 3][defense] * defense
         totalOffence += offence
     return totalOffence, totalDefense
 
@@ -165,22 +166,24 @@ class Game:
             a = ScoreBoard(self.b, r, c, piece)
             if m == None:
                 m = a, r, c
-            elif m[0][1] < a[1]:
+                continue
+            o, d = m[0]
+            if a[0] >= 100:
                 m = a, r, c
-            elif m[0][1] == a[1] and m[0][0] < a[0]:
+                break
+            if a[1] >= 6 and o < 6:
                 m = a, r, c
-        self.b.put(m[1], m[2])
-        if self.b.check_if_won() == piece:
-            return False, 'You loose!'
-        if self.b.is_full():
-            return False, "Draw!"
-        return True, 0
+            elif d < a[1] and o < a[0]:
+                m = a, r, c
+            elif o < a[0] and a[0] > a[1] and a[0] > d:
+                m = a, r, c
+        return m[1:]
 
-    def next_move(self, r, c):
+    def next_move(self, r, c, win_msg):
         piece = self.b.next_move()
         self.b.put(r, c)
         if self.b.check_if_won() == piece:
-            return False, "You won!"
+            return False, win_msg
         if self.b.is_full():
             return False, "Draw!"
         return True, 0
