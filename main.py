@@ -34,6 +34,13 @@ class Board:
     def is_empty(self, piece):
         return piece == ' '
 
+    def enum_pieces(self):
+        for r in range(self.__side):
+            for c in range(self.__side):
+                cell = self.get(r, c)
+                if not self.is_empty(cell):
+                    yield r,c,cell
+
     def get(self, r, c):
         return self.__board[self.__side * r + c]
 
