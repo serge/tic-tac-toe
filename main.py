@@ -34,18 +34,13 @@ class Board:
     def is_empty(self, piece):
         return piece == ' '
 
-    def enum_pieces(self):
-        for r in range(self.__side):
-            for c in range(self.__side):
-                cell = self.get(r, c)
-                if not self.is_empty(cell):
-                    yield r,c,cell
-
     def get(self, r, c):
         return self.__board[self.__side * r + c]
 
 
     def put(self, r, c):
+        if not self.is_empty(self.get(r, c)):
+            raise Exception("This cell is not empty")
         self.__board[self.__side * r + c] = self.__next_piece
         self.__next_piece = {'o':'x','x':'o'}[self.__next_piece]
 
@@ -143,7 +138,7 @@ def ScoreBoard(board, r, c, piece):
             return 100, 0
         if defense > 0:
             offence = 0;
-        totalDefense += [0, 1, 3][defense] * defense
+        totalDefense += [0, 1, 10][defense] * defense
         totalOffence += offence
     return totalOffence, totalDefense
 
@@ -164,18 +159,17 @@ class Game:
         piece = self.b.next_move()
         for (r, c) in self.b.get_moves():
             a = ScoreBoard(self.b, r, c, piece)
+            offence, defense = a
+            if offence >= 100: # we are about to we
+                m = a, r, c
+                break
             if m == None:
                 m = a, r, c
                 continue
             o, d = m[0]
-            if a[0] >= 100:
+            if defense >= 20: # that the way to go or we will loose
                 m = a, r, c
-                break
-            if a[1] >= 6 and o < 6:
-                m = a, r, c
-            elif d < a[1] and o < a[0]:
-                m = a, r, c
-            elif o < a[0] and a[0] > a[1] and a[0] > d:
+            elif d < 20 and (offence > o or (offence == o and d < defense)):
                 m = a, r, c
         return m[1:]
 
